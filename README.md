@@ -30,17 +30,7 @@ The operator itself has been built with the [Operator framework](https://github.
 
 ### Install the Operator
 
-Register the `Neo4jCluster` custom resource definition.
-
-    $ kubectl apply -f deploy/crds/database_v1alpha1_neo4jcluster_crd.yaml
-
-You can choose to enable Neo4J operator for all namespaces or just for the a specific one. Examples target default namespace.
-
-Create the operator role, role binding and service account.
-
-    $ kubectl apply -f deploy/role.yaml
-    $ kubectl apply -f deploy/role_binding.yaml
-    $ kubectl apply -f deploy/service_account.yaml
+    $ kubectl apply -f deploy/operator.yaml
 
 Operator requires elevated privileges in order to watch for the custom resource updates. On Google Kubernetes Engine, the following command must be run before continuing with installation process. Replace user ID with your own credentials.
 
@@ -57,11 +47,6 @@ Operator requires elevated privileges in order to watch for the custom resource 
     - kind: User
       name: "your-google-id@gmail.com"
     EOF
-
-Finally, deploy the operator.
-
-    $ sed -i 's|REPLACE_IMAGE|lantonia/neo4j-operator:latest|g' deploy/operator.yaml
-    $ kubectl apply -f deploy/operator.yaml
 
 ## Deploy Sample Neo4J Cluster
 
