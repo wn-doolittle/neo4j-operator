@@ -1,0 +1,28 @@
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - neo4j.database.wna.cloud
+  resources:
+  - neo4jclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - neo4j.database.wna.cloud
+  resources:
+  - neo4jclusters/status
+  verbs:
+  - get
+  - patch
+  - update

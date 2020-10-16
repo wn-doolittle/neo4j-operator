@@ -1,0 +1,20 @@
+# permissions for end users to view neo4jclusters.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: neo4jcluster-viewer-role
+rules:
+- apiGroups:
+  - neo4j.database.wna.cloud
+  resources:
+  - neo4jclusters
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - neo4j.database.wna.cloud
+  resources:
+  - neo4jclusters/status
+  verbs:
+  - get

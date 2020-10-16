@@ -1,0 +1,11 @@
+domain: database.wna.cloud
+layout: go.kubebuilder.io/v2
+projectName: neo4j-operator
+repo: github.com/wn-doolittle/neo4j-operator
+resources:
+- group: neo4j
+  kind: Neo4jCluster
+  version: v1alpha1
+version: 3-alpha
+plugins:
+  go.sdk.operatorframework.io/v2-alpha: {}

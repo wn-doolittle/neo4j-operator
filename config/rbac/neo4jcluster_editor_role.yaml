@@ -1,0 +1,24 @@
+# permissions for end users to edit neo4jclusters.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: neo4jcluster-editor-role
+rules:
+- apiGroups:
+  - neo4j.database.wna.cloud
+  resources:
+  - neo4jclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - neo4j.database.wna.cloud
+  resources:
+  - neo4jclusters/status
+  verbs:
+  - get

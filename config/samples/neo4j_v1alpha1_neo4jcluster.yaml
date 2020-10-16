@@ -1,0 +1,7 @@
+apiVersion: neo4j.database.wna.cloud/v1alpha1
+kind: Neo4jCluster
+metadata:
+  name: neo4jcluster-sample
+spec:
+  # Add fields here
+  foo: bar

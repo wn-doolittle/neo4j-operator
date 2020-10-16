@@ -175,29 +175,42 @@ Operator can manage automatic backups triggered as Kubernetes cron jobs. Users h
 
 ## Development
 
+### Requirements
+
+* `kubectl` >= 1.12
+* `go` >= 1.13
+* `kubebuilder` >= 2.3.1
+* `kustomize` >= 3.8.1 -- cli (`brew install kustomize`)
+
+### Generate Deployment Manifests
+```
+rm -rf deploy
+mkdir -p deploy
+
+make generate manifests
+
+cd config/manager && kustomize edit set image controller=weldnorthanalytics/neo4j-operator:latest
+cd ../..
+kubectl kustomize config/default > ./deploy/operator.yaml
+```
 ### Run the Operator Locally
 
 You can run the operator locally to help with development, testing, and debugging tasks.
 
-The following command will run the operator locally with the default Kubernetes config file present at `$HOME/.kube/config`. Use the `--kubeconfig` flag to provide a different path.
+The following command will run the operator locally with the default Kubernetes config file present at `$HOME/.kube/config`.
 
-    $ export OPERATOR_NAME=neo4j-operator
-    $ operator-sdk up local --namespace=default
-
-In another terminal window, create custom Kubernetes resource definition and provision example Neo4J cluster.
-
-    $ kubectl apply -f deploy/crds/database_v1alpha1_neo4jcluster_crd.yaml
-    $ kubectl apply -f deploy/crds/database_v1alpha1_neo4jcluster_cr.yaml
+```
+make run
+```
 
 ### Build the Operator Image
 
 Use the following commands to build the image of Neo4J operator and push to desired Docker repository.
 
-    $ operator-sdk build lantonia/neo4j-operator:latest
-    $ # For old Docker versions:
-    $ # docker build -f build/Dockerfile -t lantonia/neo4j-operator:latest .
-    $ # sed -i 's|REPLACE_IMAGE|lantonia/neo4j-operator:latest|g' deploy/operator.yaml
-    $ docker push lantonia/neo4j-operator:latest
+```
+IMG=weldnorthanalytics/neo4j-operator:latest \
+make docker-build docker-push
+```
 
 ### Direct Access to Neo4J Cluster
 
