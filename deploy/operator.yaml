@@ -232,6 +232,42 @@ metadata:
   name: neo4j-operator-manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - endpoints
+  - events
+  - persistentvolumeclaims
+  - pods
+  - secrets
+  - services
+  verbs:
+  - '*'
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  - deployments
+  - replicasets
+  - statefulsets
+  verbs:
+  - '*'
+- apiGroups:
+  - apps
+  resourceNames:
+  - neo4j-operator
+  resources:
+  - deployments/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - create
+  - get
+- apiGroups:
   - neo4j.database.wna.cloud
   resources:
   - neo4jclusters
@@ -368,7 +404,7 @@ spec:
         - --enable-leader-election
         command:
         - /manager
-        image: weldnorthanalytics/neo4j-operator:latest
+        image: weldnorthanalytics/neo4j-operator:v1.0.0
         name: manager
         resources:
           limits:

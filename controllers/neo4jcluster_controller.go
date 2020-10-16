@@ -63,6 +63,10 @@ var managedObjects = []reconciler.ManagedObject{
 
 // +kubebuilder:rbac:groups=neo4j.database.wna.cloud,resources=neo4jclusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=neo4j.database.wna.cloud,resources=neo4jclusters/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups="",resources=pods;services;endpoints;persistentvolumeclaims;events;configmaps;secrets,verbs=*
+// +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs=*
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;create
+// +kubebuilder:rbac:groups=apps,resourceNames=neo4j-operator,resources=deployments/finalizers,verbs=update
 
 func (r *Neo4jClusterReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()

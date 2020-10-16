@@ -167,17 +167,6 @@ Operator can manage automatic backups triggered as Kubernetes cron jobs. Users h
 * `kubebuilder` >= 2.3.1
 * `kustomize` >= 3.8.1 -- cli (`brew install kustomize`)
 
-### Generate Deployment Manifests
-```
-rm -rf deploy
-mkdir -p deploy
-
-make generate manifests
-
-cd config/manager && kustomize edit set image controller=weldnorthanalytics/neo4j-operator:latest
-cd ../..
-kubectl kustomize config/default > ./deploy/operator.yaml
-```
 ### Run the Operator Locally
 
 You can run the operator locally to help with development, testing, and debugging tasks.
@@ -193,8 +182,20 @@ make run
 Use the following commands to build the image of Neo4J operator and push to desired Docker repository.
 
 ```
-IMG=weldnorthanalytics/neo4j-operator:latest \
+IMG=weldnorthanalytics/neo4j-operator:v1.0.0 \
 make docker-build docker-push
+```
+
+### Generate Deployment Manifests
+```
+rm -rf deploy
+mkdir -p deploy
+
+make generate manifests
+
+cd config/manager && kustomize edit set image controller=weldnorthanalytics/neo4j-operator:v1.0.0
+cd ../..
+kubectl kustomize config/default > ./deploy/operator.yaml
 ```
 
 ### Direct Access to Neo4J Cluster
