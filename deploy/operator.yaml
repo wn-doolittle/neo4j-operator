@@ -110,7 +110,7 @@ spec:
               required:
               - size
               type: object
-            podAnnotations:
+            pod-annotations:
               additionalProperties:
                 type: string
               type: object
@@ -408,7 +408,7 @@ spec:
         - --enable-leader-election
         command:
         - /manager
-        image: weldnorthanalytics/neo4j-operator:v1.0.1
+        image: weldnorthanalytics/neo4j-operator:v1.0.2
         name: manager
         resources:
           limits:
