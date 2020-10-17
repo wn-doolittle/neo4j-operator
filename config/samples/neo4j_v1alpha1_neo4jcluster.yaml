@@ -3,5 +3,16 @@ kind: Neo4jCluster
 metadata:
   name: neo4jcluster-sample
 spec:
-  # Add fields here
-  foo: bar
+  image-version: 4.1.3-enterprise
+  admin-password: TmVvNEojUGFzc3cwcmQxMjMh
+  core-replicas: 3
+  read-replica-replicas: 5
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2048Mi
+    limits:
+      cpu: 1000m
+      memory: 2048Mi
+  persistent-storage:
+    size: 1Gi

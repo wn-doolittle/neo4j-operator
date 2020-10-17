@@ -135,7 +135,8 @@ func buildCoreServers(instance *neo4jv1alpha1.Neo4jCluster) (*apps.StatefulSet, 
 			},
 			Template: core.PodTemplateSpec{
 				ObjectMeta: meta.ObjectMeta{
-					Labels: defaultLabels,
+					Labels:      defaultLabels,
+					Annotations: instance.Spec.PodAnnotations,
 				},
 				Spec: core.PodSpec{
 					NodeSelector: instance.Spec.NodeSelector,

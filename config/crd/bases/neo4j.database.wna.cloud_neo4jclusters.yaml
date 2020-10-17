@@ -105,6 +105,10 @@ spec:
               required:
               - size
               type: object
+            podAnnotations:
+              additionalProperties:
+                type: string
+              type: object
             read-replica-args:
               additionalProperties:
                 type: string

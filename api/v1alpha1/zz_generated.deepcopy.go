@@ -132,6 +132,13 @@ func (in *Neo4jClusterSpec) DeepCopyInto(out *Neo4jClusterSpec) {
 		}
 	}
 	out.Resources = in.Resources
+	if in.PodAnnotations != nil {
+		in, out := &in.PodAnnotations, &out.PodAnnotations
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.PersistentStorage != nil {
 		in, out := &in.PersistentStorage, &out.PersistentStorage
 		*out = new(PersistentStorage)

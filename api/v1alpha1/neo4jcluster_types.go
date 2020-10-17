@@ -38,6 +38,7 @@ type Neo4jClusterSpec struct {
 	ReadReplicaServers   int32              `json:"read-replica-replicas"`
 	ReadReplicaArguments map[string]string  `json:"read-replica-args,omitempty"`
 	Resources            Resources          `json:"resources"`
+	PodAnnotations       map[string]string  `json:"podAnnotations,omitempty"`
 	PersistentStorage    *PersistentStorage `json:"persistent-storage,omitempty"`
 	SslCertificates      *SslCertificates   `json:"ssl,omitempty"`
 	Backup               *Backup            `json:"backup,omitempty"`
