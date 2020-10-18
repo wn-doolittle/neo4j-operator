@@ -16,7 +16,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	neo4jv1alpha1 "github.com/wn-doolittle/neo4j-operator/api/v1alpha1"
-	apps "k8s.io/api/apps/v1beta2"
+	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
