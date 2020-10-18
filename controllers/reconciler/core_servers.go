@@ -157,15 +157,12 @@ func buildCoreServers(instance *neo4jv1alpha1.Neo4jCluster) (*apps.StatefulSet, 
 								"/bin/bash",
 								"-c",
 								`
-export NEO4J_dbms_connectors_default__advertised__address=$(hostname -f)
+export NEO4J_dbms_default__advertised__address=$(hostname -f)
 export NEO4J_causal__clustering_discovery__advertised__address=$(hostname -f):5000
 export NEO4J_causal__clustering_transaction__advertised__address=$(hostname -f):6000
 export NEO4J_causal__clustering_raft__advertised__address=$(hostname -f):7000
 export NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687
 export NEO4J_dbms_connector_http_listen__address=0.0.0.0:7474
-export NEO4J_dbms_connector_https_enabled=true            
-export NEO4J_dbms_connector_https_listen__address=0.0.0.0:7473
-export NEO4J_dbms_connector_bolt_tls__level=OPTIONAL
 export NEO4J_dbms_backup_enabled=true
 export NEO4J_dbms_backup_address=0.0.0.0:6362
 if [ "${AUTH_ENABLED:-}" == "true" ]; then
@@ -177,6 +174,11 @@ if [ "${SSL_CERTIFICATES:-}" == "true" ]; then
   mkdir /ssl
   echo "${SSL_KEY}" > /ssl/neo4j.key
   echo "${SSL_CERTIFICATE}" > /ssl/neo4j.cert
+  export NEO4J_dbms_connector_https_enabled=true
+  export NEO4J_dbms_connector_https_listen__address=0.0.0.0:7473
+  export NEO4J_dbms_ssl_policy_bolt_enabled=true
+  export NEO4J_dbms_ssl_policy_https_enabled=true
+  export NEO4J_dbms_connector_bolt_tls__level=OPTIONAL
 fi
 rm -rf /var/lib/neo4j/data/dbms/auth
 exec /docker-entrypoint.sh "neo4j"
