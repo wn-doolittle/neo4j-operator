@@ -99,10 +99,8 @@ func buildReadReplicas(instance *neo4jv1alpha1.Neo4jCluster) *apps.StatefulSet {
 	}
 	probe := &core.Probe{
 		Handler: core.Handler{
-			HTTPGet: &core.HTTPGetAction{
-				Scheme: core.URISchemeHTTP,
-				Path:   "/db/manage/server/read-replica/available",
-				Port:   intstr.FromInt(7474),
+			TCPSocket: &core.TCPSocketAction{
+				Port: intstr.FromInt(7687),
 			},
 		},
 		InitialDelaySeconds: 180,
@@ -150,6 +148,11 @@ func buildReadReplicas(instance *neo4jv1alpha1.Neo4jCluster) *apps.StatefulSet {
 							Env: []core.EnvVar{
 								{Name: "NEO4J_ACCEPT_LICENSE_AGREEMENT", Value: "yes"},
 								{Name: "SSL_CERTIFICATES", Value: strconv.FormatBool(instance.Spec.SslCertificates != nil)},
+								{Name: "POD_IP", ValueFrom: &core.EnvVarSource{
+									FieldRef: &core.ObjectFieldSelector{
+										FieldPath: "status.podIP",
+									},
+								}},
 								{Name: "NEO4J_dbms_mode", Value: "READ_REPLICA"},
 								{Name: "NEO4J_dbms_security_auth__enabled", Value: strconv.FormatBool(instance.Spec.AuthorizationEnabled())},
 								{Name: "NEO4J_causal__clustering_discovery__type", Value: "DNS"},
@@ -161,12 +164,12 @@ func buildReadReplicas(instance *neo4jv1alpha1.Neo4jCluster) *apps.StatefulSet {
 								"/bin/bash",
 								"-c",
 								`
-export NEO4J_dbms_default__advertised__address=$(hostname -f)
-export NEO4J_causal__clustering_transaction__advertised__address=$(hostname -f):6000
+export NEO4J_dbms_default__advertised__address=$(POD_IP)
+export NEO4J_causal__clustering_transaction__advertised__address=$(POD_IP):6000
 export NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687
 export NEO4J_dbms_connector_http_listen__address=0.0.0.0:7474
 export NEO4J_dbms_backup_enabled=true
-export NEO4J_dbms_backup_address=0.0.0.0:6362
+export NEO4J_dbms_backup_listen__address=0.0.0.0:6362
 if [ "${AUTH_ENABLED:-}" == "true" ]; then
   export NEO4J_AUTH="neo4j/${NEO4J_SECRETS_PASSWORD}"
 else

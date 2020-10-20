@@ -96,10 +96,8 @@ func buildCoreServers(instance *neo4jv1alpha1.Neo4jCluster) (*apps.StatefulSet, 
 	}
 	probe := &core.Probe{
 		Handler: core.Handler{
-			HTTPGet: &core.HTTPGetAction{
-				Scheme: core.URISchemeHTTP,
-				Path:   "/db/manage/server/core/available",
-				Port:   intstr.FromInt(7474),
+			TCPSocket: &core.TCPSocketAction{
+				Port: intstr.FromInt(7687),
 			},
 		},
 		InitialDelaySeconds: 180,
@@ -150,6 +148,11 @@ func buildCoreServers(instance *neo4jv1alpha1.Neo4jCluster) (*apps.StatefulSet, 
 								{Name: "AUTH_ENABLED", Value: strconv.FormatBool(instance.Spec.AuthorizationEnabled())},
 								{Name: "SSL_CERTIFICATES", Value: strconv.FormatBool(instance.Spec.SslCertificates != nil)},
 								{Name: "NUMBER_OF_CORES", Value: strconv.FormatInt(int64(instance.Spec.CoreServers), 10)},
+								{Name: "POD_IP", ValueFrom: &core.EnvVarSource{
+									FieldRef: &core.ObjectFieldSelector{
+										FieldPath: "status.podIP",
+									},
+								}},
 							},
 							ReadinessProbe: probe,
 							LivenessProbe:  probe,
@@ -157,14 +160,14 @@ func buildCoreServers(instance *neo4jv1alpha1.Neo4jCluster) (*apps.StatefulSet, 
 								"/bin/bash",
 								"-c",
 								`
-export NEO4J_dbms_default__advertised__address=$(hostname -f)
-export NEO4J_causal__clustering_discovery__advertised__address=$(hostname -f):5000
-export NEO4J_causal__clustering_transaction__advertised__address=$(hostname -f):6000
-export NEO4J_causal__clustering_raft__advertised__address=$(hostname -f):7000
+export NEO4J_dbms_default__advertised__address=$(POD_IP)
+export NEO4J_causal__clustering_discovery__advertised__address=$(POD_IP):5000
+export NEO4J_causal__clustering_transaction__advertised__address=$(POD_IP):6000
+export NEO4J_causal__clustering_raft__advertised__address=$(POD_IP):7000
 export NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687
 export NEO4J_dbms_connector_http_listen__address=0.0.0.0:7474
 export NEO4J_dbms_backup_enabled=true
-export NEO4J_dbms_backup_address=0.0.0.0:6362
+export NEO4J_dbms_backup_listen__address=0.0.0.0:6362
 if [ "${AUTH_ENABLED:-}" == "true" ]; then
   export NEO4J_AUTH="neo4j/${NEO4J_SECRETS_PASSWORD}"
 else
