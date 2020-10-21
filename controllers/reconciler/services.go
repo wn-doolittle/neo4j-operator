@@ -107,9 +107,10 @@ func buildReplicaService(instance *neo4jv1alpha1.Neo4jCluster) *core.Service {
 				{Name: "http", Port: 7474, TargetPort: intstr.FromInt(7474), Protocol: "TCP"},
 				{Name: "bolt", Port: 7687, TargetPort: intstr.FromInt(7687), Protocol: "TCP"},
 			},
-			Type:            "ClusterIP",
-			SessionAffinity: "None",
-			ClusterIP:       "None",
+			Type:                     "ClusterIP",
+			PublishNotReadyAddresses: true,
+			SessionAffinity:          "None",
+			ClusterIP:                "None",
 			Selector: map[string]string{
 				"role":      "neo4j-replica",
 				"component": instance.LabelComponentName(),
