@@ -43,6 +43,7 @@ type Neo4jClusterSpec struct {
 	SslCertificates      *SslCertificates   `json:"ssl,omitempty"`
 	Backup               *Backup            `json:"backup,omitempty"`
 	NodeSelector         map[string]string  `json:"node-selector,omitempty"`
+	EnablePrometheus     bool               `json:"enable-prometheus,omitempty"`
 }
 
 type PersistentStorage struct {
@@ -111,9 +112,24 @@ func init() {
 }
 
 // Custom functions.
+func (i *Neo4jCluster) ServiceAccountName() string {
+	return fmt.Sprintf("neo4j-%s-sa", i.Name)
+}
 
 func (i *Neo4jCluster) SecretStoreName() string {
 	return fmt.Sprintf("neo4j-%s-secrets", i.Name)
+}
+
+func (i *Neo4jCluster) CommonConfigMapName() string {
+	return fmt.Sprintf("neo4j-%s-common-config", i.Name)
+}
+
+func (i *Neo4jCluster) CoreConfigMapName() string {
+	return fmt.Sprintf("neo4j-%s-core-config", i.Name)
+}
+
+func (i *Neo4jCluster) ReplicaConfigMapName() string {
+	return fmt.Sprintf("neo4j-%s-replica-config", i.Name)
 }
 
 func (i *Neo4jCluster) CoreServiceName() string {
@@ -125,6 +141,10 @@ func (i *Neo4jCluster) RandomCorePod() string {
 	// For now let us always return he first pod so that shrinking
 	// and expanding the cluster does not influence backup jobs.
 	return fmt.Sprintf("neo4j-core-%s-%d.%s", i.Name, 0, i.CoreServiceName())
+}
+
+func (i *Neo4jCluster) DiscoveryServiceName(idx int) string {
+	return fmt.Sprintf("discovery-neo4j-%s-%d", i.Name, idx)
 }
 
 func (i *Neo4jCluster) ReadReplicaName() string {

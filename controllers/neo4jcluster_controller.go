@@ -54,9 +54,22 @@ type Neo4jClusterReconciler struct {
 var _ reconcile.Reconciler = &Neo4jClusterReconciler{}
 
 var managedObjects = []reconciler.ManagedObject{
+	&reconciler.ServiceAccount{},
+	&reconciler.Role{},
+	&reconciler.RoleBinding{},
+	&reconciler.CommonConfigMap{},
+	&reconciler.CoreConfigMap{},
+	&reconciler.ReplicaConfigMap{},
+	&reconciler.InitScriptConfigMap{},
 	&reconciler.Secret{},
 	&reconciler.CoreServer{},
 	&reconciler.CoreService{},
+	&reconciler.DiscoveryService{Index: 0},
+	&reconciler.DiscoveryService{Index: 1},
+	&reconciler.DiscoveryService{Index: 2},
+	&reconciler.DiscoveryService{Index: 3},
+	&reconciler.DiscoveryService{Index: 4},
+	&reconciler.DiscoveryService{Index: 5},
 	&reconciler.ReadReplica{},
 	&reconciler.ReadReplicaService{},
 }
