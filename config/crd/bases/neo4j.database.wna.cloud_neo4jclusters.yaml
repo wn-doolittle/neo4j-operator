@@ -84,6 +84,8 @@ spec:
             core-replicas:
               format: int32
               type: integer
+            enable-prometheus:
+              type: boolean
             image-pull-policy:
               type: string
             image-version:
