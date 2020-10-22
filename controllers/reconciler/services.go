@@ -175,7 +175,7 @@ func buildDiscoveryService(idx int, instance *neo4jv1alpha1.Neo4jCluster) *core.
 			SessionAffinity:          "None",
 			ClusterIP:                "None",
 			Selector: map[string]string{
-				"statefulset.kubernetes.io/pod-name": fmt.Sprintf("neo4j-neo4j-core-%d", idx),
+				"statefulset.kubernetes.io/pod-name": fmt.Sprintf("%s-%d", instance.CoreServiceName(), idx),
 			},
 		},
 	}

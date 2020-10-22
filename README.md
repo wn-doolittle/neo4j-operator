@@ -182,7 +182,7 @@ make run
 Use the following commands to build the image of Neo4J operator and push to desired Docker repository.
 
 ```
-IMG=weldnorthanalytics/neo4j-operator:v1.0.9 \
+IMG=weldnorthanalytics/neo4j-operator:v1.0.18 \
 make docker-build docker-push
 ```
 
@@ -193,7 +193,7 @@ mkdir -p deploy
 
 make generate manifests
 
-cd config/manager && kustomize edit set image controller=weldnorthanalytics/neo4j-operator:v1.0.9
+cd config/manager && kustomize edit set image controller=weldnorthanalytics/neo4j-operator:v1.0.18
 cd ../..
 kubectl kustomize config/default > ./deploy/operator.yaml
 ```

@@ -143,8 +143,12 @@ func (i *Neo4jCluster) RandomCorePod() string {
 	return fmt.Sprintf("neo4j-core-%s-%d.%s", i.Name, 0, i.CoreServiceName())
 }
 
+func (i *Neo4jCluster) DiscoveryServiceNamePrefix() string {
+	return fmt.Sprintf("discovery-neo4j-%s", i.Name)
+}
+
 func (i *Neo4jCluster) DiscoveryServiceName(idx int) string {
-	return fmt.Sprintf("discovery-neo4j-%s-%d", i.Name, idx)
+	return fmt.Sprintf("%s-%d", i.DiscoveryServiceNamePrefix(), idx)
 }
 
 func (i *Neo4jCluster) ReadReplicaName() string {

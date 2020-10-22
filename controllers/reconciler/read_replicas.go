@@ -13,7 +13,6 @@
 package reconciler
 
 import (
-	"encoding/base64"
 	"fmt"
 	neo4jv1alpha1 "github.com/wn-doolittle/neo4j-operator/api/v1alpha1"
 	apps "k8s.io/api/apps/v1"
@@ -96,27 +95,6 @@ func buildReadReplicas(instance *neo4jv1alpha1.Neo4jCluster) *apps.StatefulSet {
 		"component": instance.LabelComponentName(),
 		"role":      "neo4j-replica",
 	}
-	probe := &core.Probe{
-		Handler: core.Handler{
-			TCPSocket: &core.TCPSocketAction{
-				Port: intstr.FromInt(7687),
-			},
-		},
-		InitialDelaySeconds: 180,
-		TimeoutSeconds:      2,
-		PeriodSeconds:       10,
-		SuccessThreshold:    1,
-		FailureThreshold:    3,
-	}
-	if instance.Spec.AuthorizationEnabled() {
-		password, _ := instance.Spec.AdminPasswordClearText()
-		probe.HTTPGet.HTTPHeaders = []core.HTTPHeader{
-			{
-				Name:  "Authorization",
-				Value: fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("neo4j:%s", *password)))),
-			},
-		}
-	}
 	statefulSet := &apps.StatefulSet{
 		ObjectMeta: meta.ObjectMeta{
 			Name:      instance.ReadReplicaName(),
@@ -138,12 +116,33 @@ func buildReadReplicas(instance *neo4jv1alpha1.Neo4jCluster) *apps.StatefulSet {
 					Annotations: instance.Spec.PodAnnotations,
 				},
 				Spec: core.PodSpec{
-					NodeSelector: instance.Spec.NodeSelector,
+					ServiceAccountName: instance.ServiceAccountName(),
+					// High value permits checkpointing on Neo4j shutdown.  See: https://neo4j.com/developer/kb/checkpointing-and-log-pruning-interactions/
+					TerminationGracePeriodSeconds: func(i int64) *int64 { return &i }(300),
+					NodeSelector:                  instance.Spec.NodeSelector,
 					Containers: []core.Container{
 						{
 							Name:            "replica",
 							Image:           instance.Spec.DockerImage(),
 							ImagePullPolicy: core.PullPolicy(imagePullPolicy),
+							Env: []core.EnvVar{
+								{
+									Name:  "DISCOVERY_HOST_PREFIX",
+									Value: instance.DiscoveryServiceNamePrefix(),
+								},
+								{
+									Name: "POD_NAMESPACE",
+									ValueFrom: &core.EnvVarSource{
+										FieldRef: &core.ObjectFieldSelector{
+											FieldPath: "metadata.namespace",
+										},
+									},
+								},
+								{
+									Name:  "NEO4J_causal__clustering_kubernetes_label__selector",
+									Value: fmt.Sprintf("neo4j.com/cluster=%s,neo4j.com/role=CORE,neo4j.com/coreindex in (0, 1, 2)", instance.LabelComponentName()),
+								},
+							},
 							EnvFrom: []core.EnvFromSource{
 								{
 									ConfigMapRef: &core.ConfigMapEnvSource{
@@ -160,24 +159,46 @@ func buildReadReplicas(instance *neo4jv1alpha1.Neo4jCluster) *apps.StatefulSet {
 									},
 								},
 							},
-							ReadinessProbe: probe,
-							LivenessProbe:  probe,
+							ReadinessProbe: &core.Probe{
+								Handler: core.Handler{
+									TCPSocket: &core.TCPSocketAction{
+										Port: intstr.FromInt(7687),
+									},
+								},
+								InitialDelaySeconds: 120,
+								TimeoutSeconds:      2,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								FailureThreshold:    3,
+							},
+							LivenessProbe: &core.Probe{
+								Handler: core.Handler{
+									TCPSocket: &core.TCPSocketAction{
+										Port: intstr.FromInt(7687),
+									},
+								},
+								InitialDelaySeconds: 300,
+								TimeoutSeconds:      2,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								FailureThreshold:    3,
+							},
 							Command: []string{
 								"/bin/bash",
 								"-c",
 								`
-export core_idx=$(hostname | sed 's|.*-||')
+export replica_idx=$(hostname | sed 's|.*-||')
 
 # Processes key configuration elements and exports env vars we need.
 . /helm-init/init.sh
-# We advertise the discovery-lb addresses (see discovery-lb.yaml) because
-# it is for internal cluster comms and is limited to private ports.
-export DISCOVERY_HOST="discovery-neo4j-neo4j-${core_idx}.neo4jtest.svc.cluster.local"
-export NEO4J_causal__clustering_discovery__advertised__address="$DISCOVERY_HOST:5000"
-export NEO4J_causal__clustering_transaction__advertised__address="$DISCOVERY_HOST:6000"
-export NEO4J_causal__clustering_raft__advertised__address="$DISCOVERY_HOST:7000"
 
-echo "Starting Neo4j CORE $core_idx on $HOST"
+# These settings are *not* overrideable, because they must match the addresses the
+# core members see to avoid akka rejections.
+export NEO4J_causal__clustering_discovery__advertised__address=$HOST:5000
+export NEO4J_causal__clustering_transaction__advertised__address=$HOST:6000
+export NEO4J_causal__clustering_raft__advertised__address=$HOST:7000
+
+echo "Starting Neo4j READ_REPLICA $replica_idx on $HOST"
 exec /docker-entrypoint.sh "neo4j"
 `,
 							},
