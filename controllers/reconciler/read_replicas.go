@@ -13,7 +13,6 @@
 package reconciler
 
 import (
-	"encoding/base64"
 	"fmt"
 	neo4jv1alpha1 "github.com/wn-doolittle/neo4j-operator/api/v1alpha1"
 	apps "k8s.io/api/apps/v1"
@@ -23,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"reflect"
-	"strconv"
 )
 
 type ReadReplica struct {
@@ -97,27 +95,6 @@ func buildReadReplicas(instance *neo4jv1alpha1.Neo4jCluster) *apps.StatefulSet {
 		"component": instance.LabelComponentName(),
 		"role":      "neo4j-replica",
 	}
-	probe := &core.Probe{
-		Handler: core.Handler{
-			TCPSocket: &core.TCPSocketAction{
-				Port: intstr.FromInt(7687),
-			},
-		},
-		InitialDelaySeconds: 180,
-		TimeoutSeconds:      2,
-		PeriodSeconds:       10,
-		SuccessThreshold:    1,
-		FailureThreshold:    3,
-	}
-	if instance.Spec.AuthorizationEnabled() {
-		password, _ := instance.Spec.AdminPasswordClearText()
-		probe.HTTPGet.HTTPHeaders = []core.HTTPHeader{
-			{
-				Name:  "Authorization",
-				Value: fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("neo4j:%s", *password)))),
-			},
-		}
-	}
 	statefulSet := &apps.StatefulSet{
 		ObjectMeta: meta.ObjectMeta{
 			Name:      instance.ReadReplicaName(),
@@ -139,63 +116,102 @@ func buildReadReplicas(instance *neo4jv1alpha1.Neo4jCluster) *apps.StatefulSet {
 					Annotations: instance.Spec.PodAnnotations,
 				},
 				Spec: core.PodSpec{
-					NodeSelector: instance.Spec.NodeSelector,
+					ServiceAccountName: instance.ServiceAccountName(),
+					// High value permits checkpointing on Neo4j shutdown.  See: https://neo4j.com/developer/kb/checkpointing-and-log-pruning-interactions/
+					TerminationGracePeriodSeconds: func(i int64) *int64 { return &i }(300),
+					NodeSelector:                  instance.Spec.NodeSelector,
 					Containers: []core.Container{
 						{
 							Name:            "replica",
 							Image:           instance.Spec.DockerImage(),
 							ImagePullPolicy: core.PullPolicy(imagePullPolicy),
 							Env: []core.EnvVar{
-								{Name: "NEO4J_ACCEPT_LICENSE_AGREEMENT", Value: "yes"},
-								{Name: "SSL_CERTIFICATES", Value: strconv.FormatBool(instance.Spec.SslCertificates != nil)},
-								{Name: "POD_IP", ValueFrom: &core.EnvVarSource{
-									FieldRef: &core.ObjectFieldSelector{
-										FieldPath: "status.podIP",
+								{
+									Name:  "DISCOVERY_HOST_PREFIX",
+									Value: instance.DiscoveryServiceNamePrefix(),
+								},
+								{
+									Name: "POD_NAMESPACE",
+									ValueFrom: &core.EnvVarSource{
+										FieldRef: &core.ObjectFieldSelector{
+											FieldPath: "metadata.namespace",
+										},
 									},
-								}},
-								{Name: "NEO4J_dbms_mode", Value: "READ_REPLICA"},
-								{Name: "NEO4J_dbms_security_auth__enabled", Value: strconv.FormatBool(instance.Spec.AuthorizationEnabled())},
-								{Name: "NEO4J_causal__clustering_discovery__type", Value: "DNS"},
-								{Name: "NEO4J_causal__clustering_initial__discovery__members", Value: discoveryMembers(instance)},
+								},
+								{
+									Name:  "NEO4J_causal__clustering_kubernetes_label__selector",
+									Value: fmt.Sprintf("neo4j.com/cluster=%s,neo4j.com/role=CORE,neo4j.com/coreindex in (0, 1, 2)", instance.LabelComponentName()),
+								},
 							},
-							ReadinessProbe: probe,
-							LivenessProbe:  probe,
+							EnvFrom: []core.EnvFromSource{
+								{
+									ConfigMapRef: &core.ConfigMapEnvSource{
+										LocalObjectReference: core.LocalObjectReference{
+											Name: instance.CommonConfigMapName(),
+										},
+									},
+								},
+								{
+									ConfigMapRef: &core.ConfigMapEnvSource{
+										LocalObjectReference: core.LocalObjectReference{
+											Name: instance.ReplicaConfigMapName(),
+										},
+									},
+								},
+							},
+							ReadinessProbe: &core.Probe{
+								Handler: core.Handler{
+									TCPSocket: &core.TCPSocketAction{
+										Port: intstr.FromInt(7687),
+									},
+								},
+								InitialDelaySeconds: 120,
+								TimeoutSeconds:      2,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								FailureThreshold:    3,
+							},
+							LivenessProbe: &core.Probe{
+								Handler: core.Handler{
+									TCPSocket: &core.TCPSocketAction{
+										Port: intstr.FromInt(7687),
+									},
+								},
+								InitialDelaySeconds: 300,
+								TimeoutSeconds:      2,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								FailureThreshold:    3,
+							},
 							Command: []string{
 								"/bin/bash",
 								"-c",
 								`
-export NEO4J_dbms_default__advertised__address=$(POD_IP)
-export NEO4J_causal__clustering_transaction__advertised__address=$(POD_IP):6000
-export NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687
-export NEO4J_dbms_connector_http_listen__address=0.0.0.0:7474
-export NEO4J_dbms_backup_enabled=true
-export NEO4J_dbms_backup_listen__address=0.0.0.0:6362
-if [ "${AUTH_ENABLED:-}" == "true" ]; then
-  export NEO4J_AUTH="neo4j/${NEO4J_SECRETS_PASSWORD}"
-else
-  export NEO4J_AUTH="none"
-fi
-if [ "${SSL_CERTIFICATES:-}" == "true" ]; then
-  mkdir /ssl
-  echo "${SSL_KEY}" > /ssl/neo4j.key
-  echo "${SSL_CERTIFICATE}" > /ssl/neo4j.cert
-  export NEO4J_dbms_connector_https_enabled=true
-  export NEO4J_dbms_connector_https_listen__address=0.0.0.0:7473
-  export NEO4J_dbms_ssl_policy_bolt_enabled=true
-  export NEO4J_dbms_ssl_policy_https_enabled=true
-  export NEO4J_dbms_connector_bolt_tls__level=OPTIONAL
-fi
-rm -rf /var/lib/neo4j/data/dbms/auth
+export replica_idx=$(hostname | sed 's|.*-||')
+
+# Processes key configuration elements and exports env vars we need.
+. /helm-init/init.sh
+
+# These settings are *not* overrideable, because they must match the addresses the
+# core members see to avoid akka rejections.
+export NEO4J_causal__clustering_discovery__advertised__address=$HOST:5000
+export NEO4J_causal__clustering_transaction__advertised__address=$HOST:6000
+export NEO4J_causal__clustering_raft__advertised__address=$HOST:7000
+
+echo "Starting Neo4j READ_REPLICA $replica_idx on $HOST"
 exec /docker-entrypoint.sh "neo4j"
 `,
 							},
 							Ports: []core.ContainerPort{
-								{Name: "tx", ContainerPort: 6000, Protocol: "TCP"},
+								{Name: "tcp-discovery", ContainerPort: 5000, Protocol: "TCP"},
+								{Name: "tcp-tx", ContainerPort: 6000, Protocol: "TCP"},
+								{Name: "tcp-raft", ContainerPort: 7000, Protocol: "TCP"},
 								{Name: "browser-https", ContainerPort: 7473, Protocol: "TCP"},
-								{Name: "browser-http", ContainerPort: 7474, Protocol: "TCP"},
-								{Name: "bolt", ContainerPort: 7687, Protocol: "TCP"},
+								{Name: "tcp-browser", ContainerPort: 7474, Protocol: "TCP"},
+								{Name: "tcp-bolt", ContainerPort: 7687, Protocol: "TCP"},
 							},
 							VolumeMounts: []core.VolumeMount{
+								{Name: "init-script", MountPath: "/helm-init"},
 								{Name: "datadir", MountPath: dataMountPath},
 								{Name: "plugins", MountPath: "/plugins"},
 							},
@@ -212,6 +228,16 @@ exec /docker-entrypoint.sh "neo4j"
 						},
 					},
 					Volumes: []core.Volume{
+						{
+							Name: "init-script",
+							VolumeSource: core.VolumeSource{
+								ConfigMap: &core.ConfigMapVolumeSource{
+									LocalObjectReference: core.LocalObjectReference{
+										Name: "neo4j-init-script",
+									},
+								},
+							},
+						},
 						{
 							Name:         "plugins",
 							VolumeSource: core.VolumeSource{EmptyDir: &core.EmptyDirVolumeSource{}},
@@ -278,5 +304,17 @@ exec /docker-entrypoint.sh "neo4j"
 			statefulSet.Spec.VolumeClaimTemplates[0].Spec.StorageClassName = &storageSettings.StorageClass
 		}
 	}
+
+	if instance.Spec.EnablePrometheus {
+		templateSpec.Containers[0].Env = append(templateSpec.Containers[0].Env,
+			core.EnvVar{Name: "NEO4J_metrics_prometheus_enabled", Value: "true"},
+			core.EnvVar{Name: "NEO4J_metrics_prometheus_endpoint", Value: "localhost:2004"},
+		)
+
+		templateSpec.Containers[0].Ports = append(templateSpec.Containers[0].Ports,
+			core.ContainerPort{Name: "tcp-prometheus", ContainerPort: 2004, Protocol: "TCP"},
+		)
+	}
+
 	return statefulSet
 }

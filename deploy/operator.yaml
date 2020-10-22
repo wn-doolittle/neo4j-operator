@@ -89,6 +89,8 @@ spec:
             core-replicas:
               format: int32
               type: integer
+            enable-prometheus:
+              type: boolean
             image-pull-policy:
               type: string
             image-version:
@@ -244,6 +246,7 @@ rules:
   - persistentvolumeclaims
   - pods
   - secrets
+  - serviceaccounts
   - services
   verbs:
   - '*'
@@ -291,6 +294,13 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - rolebindings
+  - roles
+  verbs:
+  - '*'
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -408,7 +418,7 @@ spec:
         - --enable-leader-election
         command:
         - /manager
-        image: weldnorthanalytics/neo4j-operator:v1.0.7
+        image: weldnorthanalytics/neo4j-operator:v1.0.18
         name: manager
         resources:
           limits:
