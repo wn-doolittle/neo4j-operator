@@ -91,11 +91,13 @@ spec:
               type: integer
             enable-prometheus:
               type: boolean
+            image:
+              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                Important: Run "make" to regenerate code after modifying this file'
+              type: string
             image-pull-policy:
               type: string
             image-version:
-              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-                Important: Run "make" to regenerate code after modifying this file'
               type: string
             node-selector:
               additionalProperties:
@@ -161,6 +163,7 @@ spec:
               type: object
           required:
           - core-replicas
+          - image
           - image-version
           - read-replica-replicas
           - resources
@@ -418,7 +421,7 @@ spec:
         - --enable-leader-election
         command:
         - /manager
-        image: weldnorthanalytics/neo4j-operator:v1.0.18
+        image: weldnorthanalytics/neo4j-operator:v1.0.20
         name: manager
         resources:
           limits:

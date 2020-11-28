@@ -133,10 +133,10 @@ func (r *Neo4jClusterReconciler) Reconcile(request ctrl.Request) (ctrl.Result, e
 				return reconcile.Result{}, err
 			}
 			if result == nil {
-				reqLogger.Info(fmt.Sprintf("Deleting %T", result), "Namespace", result.GetNamespace(), "Name", result.GetName())
-				err = r.Client.Delete(context.TODO(), result)
+				reqLogger.Info(fmt.Sprintf("Deleting %T", found), "Namespace", request.Namespace, "Name", obj.GetName(instance))
+				err = r.Client.Delete(context.TODO(), found)
 				if err != nil {
-					reqLogger.Error(err, "Object deletion failed", "Namespace", result.GetNamespace(), "Name", result.GetName())
+					reqLogger.Error(err, "Object deletion failed", "Namespace", request.Namespace, "Name", obj.GetName(instance))
 					return reconcile.Result{}, err
 				}
 			} else if !reflect.DeepEqual(result, found) {

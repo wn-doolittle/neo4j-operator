@@ -30,6 +30,7 @@ import (
 type Neo4jClusterSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	Image                string             `json:"image"`
 	ImageVersion         string             `json:"image-version"`
 	ImagePullPolicy      string             `json:"image-pull-policy,omitempty"`
 	AdminPassword        string             `json:"admin-password,omitempty"`
@@ -160,7 +161,7 @@ func (i *Neo4jCluster) LabelComponentName() string {
 }
 
 func (i *Neo4jClusterSpec) DockerImage() string {
-	return fmt.Sprintf("neo4j:%s", i.ImageVersion)
+	return fmt.Sprintf("%s:%s", i.Image, i.ImageVersion)
 }
 
 func (i *Neo4jClusterSpec) IsCausalCluster() bool {
